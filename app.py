@@ -890,9 +890,9 @@ def render_daily_entry():
                 )
                 
                 phase_data = selected_player['correlation_data'][current_phase]
-                total_days = phase_data['total']
-                fatigue_days = phase_data['fatigue']
-                correlation = round((fatigue_days / total_days) * 100) if total_days > 0 else 0
+                total_entries = phase_data['total']
+                fatigue_entries = phase_data['fatigue']
+                correlation = round((fatigue_entries / total_entries) * 100) if total_entries > 0 else 0
                 
                 cols = st.columns([1, 2])
                 
@@ -910,7 +910,7 @@ def render_daily_entry():
                     st.markdown(f"**Jour du cycle:** {day_in_cycle}/{selected_player['cycle_length']}")
                     st.markdown(f"**Énergie attendue:** {selected_player['expected_energy'][current_phase].capitalize()}")
                     
-                    if total_days > 0:
+                    if total_entries > 0:
                         st.markdown(f"**Corrélation historique fatigue:**")
                         
                         progress_color = "#2ed573" if correlation < 30 else "#ffa502" if correlation < 50 else "#ff4757"
@@ -1142,7 +1142,10 @@ def render_coach_dashboard():
             col1, col2 = st.columns(2)
             with col1:
                 st.markdown("**📅 Dernières règles**")
-                st.info(player['last_period_date'].strftime("%d/%m/%Y") if player['last_period_date'] else st.warning("Non renseigné")
+                if player['last_period_date']:
+                    st.info(player['last_period_date'].strftime("%d/%m/%Y"))
+                else:
+                    st.warning("Non renseigné")
                 
             with col2:
                 st.markdown("**🔄 Cycle actuel**")
@@ -1251,6 +1254,7 @@ def render_coach_dashboard():
                         st.markdown("---")
             else:
                 st.info("Aucune entrée enregistrée pour cette joueuse")
+
 # Interface principale
 st.title("🏐 Suivi des Cycles Menstruels - Équipe de Volley")
 
