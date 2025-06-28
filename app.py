@@ -564,6 +564,7 @@ def render_calendar():
     </div>
     """, unsafe_allow_html=True)
 
+# Remplacez la fonction render_player_management par ce code corrigé
 def render_player_management():
     st.subheader("Ajouter une nouvelle joueuse")
     
@@ -619,16 +620,35 @@ def render_player_management():
             for i, phase in enumerate(phases):
                 with cols[i]:
                     st.markdown(f"<div class='phase-card'>{phase_names[i]}</div>", unsafe_allow_html=True)
+                    
+                    # Dictionnaire de traduction
+                    energy_translation = {
+                        'low': 'Faible',
+                        'medium': 'Moyenne',
+                        'high': 'Élevée'
+                    }
+                    
+                    # Valeur actuelle traduite
+                    current_value = energy_translation.get(
+                        player['expected_energy'][phase], 
+                        'Moyenne'  # Valeur par défaut
+                    )
+                    
                     energy_option = st.radio(
                         "",
                         options=['Élevée', 'Moyenne', 'Faible'],
-                        index=['Élevée', 'Moyenne', 'Faible'].index(
-                            player['expected_energy'][phase].capitalize()
-                        ),
+                        index=['Élevée', 'Moyenne', 'Faible'].index(current_value),
                         key=f"energy_{player['id']}_{phase}",
                         horizontal=False
                     )
-                    player['expected_energy'][phase] = energy_option.lower()
+                    
+                    # Stockage en anglais pour la logique interne
+                    reverse_translation = {
+                        'Faible': 'low',
+                        'Moyenne': 'medium',
+                        'Élevée': 'high'
+                    }
+                    player['expected_energy'][phase] = reverse_translation[energy_option]
             
             st.subheader("Analyse de correspondance")
             if player['last_period_date']:
