@@ -170,11 +170,8 @@ st.markdown("""
             margin-bottom: 5px;
             color: #2c3e50;
             text-shadow: 
-                1px 1px 0px white,
-                2px 2px 0px white,
-                3px 3px 0px white,
-                -1px -1px 0px white,
-                -2px -2px 0px white;
+                0 0 5px white,
+                0 0 10px white;
             z-index: 10;
         }
         
@@ -203,6 +200,17 @@ st.markdown("""
             margin: 1px;
             border: 2px solid #2c3e50;
             box-shadow: 0 0 3px rgba(0,0,0,0.3);
+        }
+        
+        .player-risk {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            z-index: 15;
+            box-shadow: 0 0 3px rgba(0,0,0,0.5);
         }
         
         .legend {
@@ -300,24 +308,6 @@ st.markdown("""
             border: 1px solid #fadbd8;
         }
         
-        .correlation-alert {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            width: 35px;
-            height: 35px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 11px;
-            box-shadow: 0 0 8px rgba(0,0,0,0.4);
-            border: 2px solid white;
-            z-index: 15;
-        }
-        
         /* Amélioration des contrastes pour les phases */
         .phase-menstruation {
             background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
@@ -355,6 +345,11 @@ st.markdown("""
             font-weight: bold;
             color: #2c3e50;
         }
+        
+        /* Nouveau style pour les indicateurs de risque */
+        .risk-low { background-color: #27ae60; }   /* Vert */
+        .risk-medium { background-color: #f39c12; } /* Orange */
+        .risk-high { background-color: #e74c3c; }   /* Rouge */
     </style>
 """, unsafe_allow_html=True)
 
@@ -414,6 +409,39 @@ def get_phase_solid_color(phase):
         'luteal': '#8e44ad'
     }
     return colors.get(phase, '#95a5a6')
+
+def get_player_risk_level(player, current_date):
+    """Détermine le niveau de risque pour une joueuse à une date donnée"""
+    if not player['last_period_date']:
+        return None
+        
+    last_period = player['last_period_date']
+    diff_days = (current_date - last_period).days
+    
+    if diff_days < 0:
+        return None
+        
+    day_in_cycle = (diff_days % player['cycle_length']) + 1
+    phase = get_cycle_phase(day_in_cycle, player['cycle_length'], player['period_duration'])
+    
+    # Calcul du risque basé sur la corrélation historique
+    phase_data = player['correlation_data'][phase]
+    total_days = phase_data['total']
+    fatigue_days = phase_data['fatigue']
+    
+    if total_days == 0:
+        return None
+        
+    correlation = fatigue_days / total_days
+    
+    if correlation > 0.7:
+        return 'high'
+    elif correlation > 0.5:
+        return 'medium'
+    elif correlation > 0.3:
+        return 'low'
+    
+    return None
 
 def add_player(name):
     """Ajoute une nouvelle joueuse"""
@@ -508,7 +536,7 @@ def get_energy_match_level(expected, actual):
     return 'low'
 
 def render_calendar():
-    """Affiche le calendrier avec les phases, correspondances et corrélations"""
+    """Affiche le calendrier avec les phases, correspondances et risques individuels"""
     st.markdown(f"<div class='month-nav'>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
     
@@ -584,18 +612,6 @@ def render_calendar():
             dominant_phase = None
             bg_gradient = 'linear-gradient(135deg, #ecf0f1, #bdc3c7)'
         
-        # Calculer la corrélation de fatigue pour ce jour
-        total_players = 0
-        fatigued_players = 0
-        for player in st.session_state.players:
-            player_entry = next((e for e in day_entries if e['player_id'] == player['id']), None)
-            if player_entry:
-                total_players += 1
-                if player_entry['fatigue_level'] >= 4:
-                    fatigued_players += 1
-        
-        correlation_percent = round((fatigued_players / total_players) * 100) if total_players > 0 else 0
-        
         # Créer le contenu du jour avec meilleur contraste
         day_html = f"""
         <div class='day' style='background: {bg_gradient}; position: relative;'>
@@ -629,28 +645,23 @@ def render_calendar():
                     }[match_level]
                     
                     day_html += f"<div class='player-marker' style='background-color: {match_color}' title='{player['name']}: Correspondance {match_level}'></div>"
+                    
+                    # Ajouter l'indicateur de risque individuel
+                    risk_level = get_player_risk_level(player, current_date)
+                    if risk_level:
+                        risk_color = {
+                            'low': '#27ae60',
+                            'medium': '#f39c12',
+                            'high': '#e74c3c'
+                        }[risk_level]
+                        
+                        day_html += f"<div class='player-risk' style='background-color: {risk_color}' title='{player['name']}: Risque {risk_level}'></div>"
         
         day_html += """
                 </div>
             </div>
+        </div>
         """
-        
-        # Ajouter l'indicateur de corrélation avec des couleurs plus visibles
-        if correlation_percent > 30:
-            if correlation_percent > 70:
-                alert_color = '#c0392b'  # Rouge très foncé
-            elif correlation_percent > 50:
-                alert_color = '#e74c3c'  # Rouge foncé
-            else:
-                alert_color = '#f39c12'  # Orange foncé
-                
-            day_html += f"""
-            <div class='correlation-alert' style='background-color: {alert_color};'>
-                {correlation_percent}%
-            </div>
-            """
-        
-        day_html += "</div>"
         
         st.markdown(day_html, unsafe_allow_html=True)
     
@@ -691,19 +702,24 @@ def render_calendar():
             <span>Correspondance faible - Énergie très différente</span>
         </div>
         
-        <h4 style='margin-top: 20px; color: #2c3e50;'>⚠️ Indicateur de fatigue collective :</h4>
+        <h4 style='margin-top: 20px; color: #2c3e50;'>⚠️ Indicateur de risque individuel :</h4>
         <div class='legend-item'>
-            <div style='background-color: #f39c12; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; border: 2px solid white;'>30%</div>
-            <span>Risque modéré - 30-50% des joueuses fatiguées</span>
+            <div class='player-risk' style='background-color: #27ae60; width: 25px; height: 25px;'></div>
+            <span>Risque faible - Moins de 30% de corrélation historique</span>
         </div>
         <div class='legend-item'>
-            <div style='background-color: #e74c3c; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; border: 2px solid white;'>50%</div>
-            <span>Risque élevé - 50-70% des joueuses fatiguées</span>
+            <div class='player-risk' style='background-color: #f39c12; width: 25px; height: 25px;'></div>
+            <span>Risque moyen - 30-50% de corrélation historique</span>
         </div>
         <div class='legend-item'>
-            <div style='background-color: #c0392b; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; border: 2px solid white;'>70%</div>
-            <span>Risque très élevé - Plus de 70% des joueuses fatiguées</span>
+            <div class='player-risk' style='background-color: #e74c3c; width: 25px; height: 25px;'></div>
+            <span>Risque élevé - Plus de 50% de corrélation historique</span>
         </div>
+        
+        <p style='margin-top: 20px; color: #2c3e50; font-style: italic;'>
+            <strong>Note :</strong> La corrélation historique représente le pourcentage de jours 
+            où la joueuse a signalé une fatigue élevée pendant cette phase de son cycle.
+        </p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -971,7 +987,7 @@ def render_daily_entry():
                 st.error(f"❌ Erreur: {str(e)}")
 
 def render_coach_dashboard():
-    """Tableau de bord pour l'entraîneur avec alertes et analyses"""
+    """Tableau de bord pour l'entraîneur avec alertes et analyses par joueuse"""
     st.subheader("🚨 Alertes du jour")
     
     today = date.today()
@@ -988,120 +1004,115 @@ def render_coach_dashboard():
             day_in_cycle = (diff_days % player['cycle_length']) + 1
             phase = get_cycle_phase(day_in_cycle, player['cycle_length'], player['period_duration'])
             
+            # Calculer la corrélation pour cette phase
             total_entries = player['correlation_data'][phase]['total']
             fatigue_entries = player['correlation_data'][phase]['fatigue']
-            correlation = round((fatigue_entries / total_entries) * 100) if total_entries > 0 else 0
             
-            if correlation > 30 or player['expected_energy'][phase] == 'low':
-                alerts.append({
-                    'player': player['name'],
-                    'phase': phase,
-                    'day_in_cycle': day_in_cycle,
-                    'correlation': correlation,
-                    'expected_energy': player['expected_energy'][phase],
-                    'total_entries': total_entries
-                })
+            if total_entries > 0:
+                correlation = round((fatigue_entries / total_entries) * 100)
+                
+                # Déterminer le niveau de risque
+                if correlation > 50:
+                    risk_level = "Élevé"
+                    alert_color = "#e74c3c"
+                elif correlation > 30:
+                    risk_level = "Modéré"
+                    alert_color = "#f39c12"
+                else:
+                    risk_level = "Faible"
+                    alert_color = "#27ae60"
+                
+                # Vérifier si c'est une période à risque
+                if correlation > 30:
+                    alerts.append({
+                        'player': player['name'],
+                        'phase': phase,
+                        'day_in_cycle': day_in_cycle,
+                        'correlation': correlation,
+                        'expected_energy': player['expected_energy'][phase],
+                        'total_entries': total_entries,
+                        'risk_level': risk_level,
+                        'alert_color': alert_color
+                    })
     
     if not alerts:
         st.success("✅ Aucune alerte significative pour aujourd'hui")
     else:
         for alert in alerts:
             st.markdown(f"""
-            <div class='alert-item'>
+            <div class='alert-item' style='border-left-color: {alert['alert_color']}'>
                 <div>
                     <strong>{alert['player']}</strong> - {get_phase_name_fr(alert['phase'])} (J{alert['day_in_cycle']})
-                    <br>
-                    <small>
+                    <div style='margin-top: 8px;'>
+                        <span style='background-color: {alert['alert_color']}; color: white; padding: 3px 8px; border-radius: 4px;'>
+                            Risque {alert['risk_level']}
+                        </span>
+                    </div>
+                    <small style='display: block; margin-top: 8px;'>
                         Énergie attendue: {alert['expected_energy'].capitalize()} | 
                         Corrélation fatigue: {alert['correlation']}% ({alert['total_entries']} jours analysés)
                     </small>
                 </div>
-                <div style='color: #ff6b6b; font-weight: bold;'>
-                    {'⚠️ ALERTE FORTE' if alert['correlation'] > 50 else '⚠️ Attention'}
-                </div>
             </div>
             """, unsafe_allow_html=True)
     
-    st.subheader("🔍 Analyse des corrélations")
+    st.subheader("🔍 Analyse détaillée par joueuse")
     
     if not st.session_state.players:
         st.info("ℹ️ Aucune joueuse enregistrée")
         return
     
-    st.markdown("### Corrélations par joueuse")
     for player in st.session_state.players:
         if not player['last_period_date']:
             continue
             
-        with st.expander(f"📊 {player['name']}", expanded=False):
+        with st.expander(f"📊 Analyse pour {player['name']}", expanded=False):
+            st.markdown(f"### 🔄 Cycle de {player['name']}")
             cols = st.columns(4)
             phases = ['menstruation', 'follicular', 'ovulation', 'luteal']
             
             for i, phase in enumerate(phases):
-                data = player['correlation_data'][phase]
-                total = data['total']
-                fatigue = data['fatigue']
-                correlation = round((fatigue / total) * 100) if total > 0 else 0
-                
                 with cols[i]:
-                    color = '#2ed573' if correlation < 30 else '#ffa502' if correlation < 50 else '#ff4757'
+                    data = player['correlation_data'][phase]
+                    total = data['total']
+                    fatigue = data['fatigue']
                     
-                    st.markdown(f"""
-                    <div style="text-align: center; padding: 15px; border-radius: 10px; 
-                                background-color: #f8f9fa; border: 2px solid {color};">
-                        <b>{get_phase_name_fr(phase)}</b>
-                        <div style="font-size: 24px; font-weight: bold; color: {color};">{correlation}%</div>
-                        <small>Jours: {total}</small>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    if total > 0:
+                        correlation = round((fatigue / total) * 100)
+                        # Déterminer la couleur en fonction du niveau de corrélation
+                        color = '#2ed573' if correlation < 30 else '#ffa502' if correlation < 50 else '#ff4757'
+                        
+                        st.markdown(f"""
+                        <div style="text-align: center; padding: 15px; border-radius: 10px; 
+                                    background-color: #f8f9fa; border: 2px solid {color};">
+                            <b>{get_phase_name_fr(phase)}</b>
+                            <div style="font-size: 24px; font-weight: bold; color: {color};">{correlation}%</div>
+                            <small>Jours analysés: {total}</small>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        st.info(f"ℹ️ Pas de données pour {get_phase_name_fr(phase)}")
             
+            # Recommandations basées sur les données
             high_corr_phases = [p for p in phases 
                                if player['correlation_data'][p]['total'] > 5 and 
                                (player['correlation_data'][p]['fatigue'] / player['correlation_data'][p]['total']) > 0.5]
             
             if high_corr_phases:
-                st.warning("**Recommandations d'entraînement:**")
-                st.markdown(f"- Pendant les phases suivantes, réduire l'intensité des exercices: {', '.join([get_phase_name_fr(p) for p in high_corr_phases])}")
-                st.markdown("- Prévoir des périodes de récupération supplémentaires")
-                st.markdown("- Adapter les exercices en fonction du niveau de fatigue rapporté")
-    
-    st.markdown("### Tendance globale")
-    phase_data = []
-    for phase in ['menstruation', 'follicular', 'ovulation', 'luteal']:
-        total_fatigue = 0
-        total_entries = 0
-        
-        for player in st.session_state.players:
-            data = player['correlation_data'][phase]
-            total_fatigue += data['fatigue']
-            total_entries += data['total']
-        
-        correlation = round((total_fatigue / total_entries) * 100) if total_entries > 0 else 0
-        phase_data.append({
-            'phase': get_phase_name_fr(phase),
-            'correlation': correlation,
-            'total_entries': total_entries
-        })
-    
-    if phase_data:
-        df = pd.DataFrame(phase_data)
-        fig, ax = plt.subplots(figsize=(10, 6))
-        sns.barplot(x='phase', y='correlation', data=df, ax=ax, palette=['#ff4757', '#ffa502', '#2ed573', '#3742fa'])
-        ax.set_title("Corrélation moyenne entre phase du cycle et fatigue")
-        ax.set_ylabel("Pourcentage de jours avec fatigue (%)")
-        ax.set_xlabel("Phase du cycle")
-        ax.set_ylim(0, 100)
-        
-        for p in ax.patches:
-            ax.annotate(f"{p.get_height():.0f}%", 
-                        (p.get_x() + p.get_width() / 2., p.get_height()), 
-                        ha='center', va='center', 
-                        xytext=(0, 10), 
-                        textcoords='offset points')
-        
-        st.pyplot(fig)
-    else:
-        st.info("ℹ️ Pas assez de données pour l'analyse globale")
+                st.markdown("---")
+                st.subheader("🎯 Recommandations d'entraînement")
+                
+                if high_corr_phases:
+                    st.warning(f"**Pendant ces phases, adapter l'entraînement pour {player['name']}:**")
+                    for p in high_corr_phases:
+                        st.markdown(f"- **{get_phase_name_fr(p)}**: Réduire l'intensité des exercices")
+                    
+                    st.markdown("**Stratégies recommandées:**")
+                    st.markdown("- Prévoir des périodes de récupération supplémentaires")
+                    st.markdown("- Adapter les exercices en fonction du niveau de fatigue rapporté")
+                    st.markdown("- Augmenter l'hydratation et les pauses")
+                else:
+                    st.success("✅ Aucune phase à risque élevé identifiée pour cette joueuse")
 
 # Interface principale
 st.title("🏐 Suivi des Cycles Menstruels - Équipe de Volley")
