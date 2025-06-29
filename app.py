@@ -95,6 +95,13 @@ st.set_page_config(
 # Style CSS personnalisé avec meilleur contraste et lisibilité
 st.markdown("""
     <style>
+        :root {
+            --menstruation: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            --follicular: linear-gradient(135deg, #f39c12 0%, #d68910 100%);
+            --ovulation: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+            --luteal: linear-gradient(135deg, #8e44ad 0%, #7d3c98 100%);
+        }
+        
         .stApp {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
@@ -110,9 +117,12 @@ st.markdown("""
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
         }
         
+        h1, h2, h3, h4, h5, h6 {
+            color: #2c3e50;
+        }
+        
         h1 {
             text-align: center;
-            color: #2c3e50;
             margin-bottom: 30px;
             font-size: 2.5em;
             font-weight: bold;
@@ -129,6 +139,7 @@ st.markdown("""
             padding: 20px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
+        
         .alert-energy {
             background: #fff5f5;
             border-left: 6px solid #ff6b6b;
@@ -203,12 +214,19 @@ st.markdown("""
         }
         
         .player-marker {
-            width: 12px;
-            height: 12px;
+            width: 25px;
+            height: 25px;
             border-radius: 50%;
-            margin: 1px;
+            margin: 2px;
             border: 2px solid #2c3e50;
             box-shadow: 0 0 3px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            color: white;
+            text-shadow: 1px 1px 1px #000;
         }
         
         .player-risk {
@@ -254,19 +272,10 @@ st.markdown("""
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         
-        /* Nouvelles couleurs plus contrastées */
-        .menstruation { 
-            background: linear-gradient(135deg, #e74c3c, #c0392b);
-        }
-        .follicular { 
-            background: linear-gradient(135deg, #f39c12, #d68910);
-        }
-        .ovulation { 
-            background: linear-gradient(135deg, #27ae60, #229954);
-        }
-        .luteal { 
-            background: linear-gradient(135deg, #8e44ad, #7d3c98);
-        }
+        .phase-menstruation { background: var(--menstruation); }
+        .phase-follicular { background: var(--follicular); }
+        .phase-ovulation { background: var(--ovulation); }
+        .phase-luteal { background: var(--luteal); }
         
         .month-nav {
             display: flex;
@@ -317,48 +326,50 @@ st.markdown("""
             border: 1px solid #fadbd8;
         }
         
-        /* Amélioration des contrastes pour les phases */
-        .phase-menstruation {
-            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-            color: white;
+        .player-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-left: 6px solid #3498db;
         }
         
-        .phase-follicular {
-            background: linear-gradient(135deg, #f39c12 0%, #d68910 100%);
-            color: white;
+        .fatigue-input {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
         }
         
-        .phase-ovulation {
-            background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
-            color: white;
+        .fatigue-bar {
+            height: 20px;
+            border-radius: 10px;
+            background: #ecf0f1;
+            overflow: hidden;
+            margin: 5px 0;
         }
         
-        .phase-luteal {
-            background: linear-gradient(135deg, #8e44ad 0%, #7d3c98 100%);
-            color: white;
+        .fatigue-level {
+            height: 100%;
+            background: linear-gradient(90deg, #27ae60, #f39c12, #e74c3c);
         }
         
-        /* Amélioration de la lisibilité des textes */
-        .legend-item span {
-            color: #2c3e50;
-            font-weight: 600;
-            font-size: 14px;
+        .explanation-box {
+            background: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
         }
         
-        .stRadio > label {
-            font-weight: bold;
-            color: #2c3e50;
+        .correlation-explanation {
+            background: #fff8e1;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
         }
-        
-        .stSelectbox > label {
-            font-weight: bold;
-            color: #2c3e50;
-        }
-        
-        /* Nouveau style pour les indicateurs de risque */
-        .risk-low { background-color: #27ae60; }   /* Vert */
-        .risk-medium { background-color: #f39c12; } /* Orange */
-        .risk-high { background-color: #e74c3c; }   /* Rouge */
     </style>
 """, unsafe_allow_html=True)
 
@@ -388,6 +399,15 @@ def get_cycle_phase(day_in_cycle, cycle_length, period_duration):
     if day_in_cycle <= cycle_length * 0.45:
         return 'ovulation'
     return 'luteal'
+
+def get_phase_range(cycle_length, period_duration):
+    """Retourne les plages de jours pour chaque phase"""
+    return {
+        'menstruation': f"J1-J{period_duration}",
+        'follicular': f"J{period_duration + 1}-J{int(cycle_length * 0.35)}",
+        'ovulation': f"J{int(cycle_length * 0.35) + 1}-J{int(cycle_length * 0.45)}",
+        'luteal': f"J{int(cycle_length * 0.45) + 1}-J{cycle_length}"
+    }
 
 def get_phase_name_fr(phase):
     """Traduit les noms de phases en français"""
@@ -420,14 +440,7 @@ def get_phase_solid_color(phase):
     return colors.get(phase, '#95a5a6')
 
 def get_player_risk_level(player, current_date):
-    """Détermine le niveau de risque pour une joueuse à une date donnée
-    Retourne :
-    - 'high-energy-risk' si énergie attendue faible
-    - 'high' si corrélation fatigue > 70%
-    - 'medium' si corrélation fatigue > 50%
-    - 'low' si corrélation fatigue > 30%
-    - None si pas de risque détecté"""
-    
+    """Détermine le niveau de risque pour une joueuse à une date donnée"""
     if not player['last_period_date']:
         return None
         
@@ -440,37 +453,24 @@ def get_player_risk_level(player, current_date):
     day_in_cycle = (diff_days % player['cycle_length']) + 1
     phase = get_cycle_phase(day_in_cycle, player['cycle_length'], player['period_duration'])
     
-    # 1. Vérification de l'énergie attendue faible (nouveau critère)
-    if player['expected_energy'][phase] == 'low':
-        return 'high-energy-risk'
+    # Vérification de la fatigue historique pour ce jour spécifique
+    if day_in_cycle in player['daily_fatigue']:
+        if player['daily_fatigue'][str(day_in_cycle)] >= 4:
+            return 'high'
+        elif player['daily_fatigue'][str(day_in_cycle)] >= 3:
+            return 'medium'
     
-    # 2. Vérification de la corrélation historique de fatigue
-    phase_data = player['correlation_data'][phase]
-    total_days = phase_data['total']
-    fatigue_days = phase_data['fatigue']
-    
-    if total_days == 0:
-        return None
-        
-    correlation = fatigue_days / total_days
-    
-    if correlation > 0.7:
-        return 'high'
-    elif correlation > 0.5:
-        return 'medium'
-    elif correlation > 0.3:
-        return 'low'
-    
-    return None
+    return 'low'
 
-def add_player(name):
-    """Ajoute une nouvelle joueuse"""
+def add_player(name, last_period_date, daily_fatigue):
+    """Ajoute une nouvelle joueuse avec son historique de fatigue quotidien"""
     player = {
         'id': len(st.session_state.players) + 1,
         'name': name,
-        'last_period_date': None,
+        'last_period_date': last_period_date,
         'cycle_length': 28,
         'period_duration': 5,
+        'daily_fatigue': daily_fatigue,  # Historique de fatigue par jour du cycle
         'expected_energy': {
             'menstruation': 'low',
             'follicular': 'medium',
@@ -507,53 +507,15 @@ def add_daily_entry(player_id, entry_date, energy_level, fatigue_level, notes):
         'notes': notes
     }
     
+    # Supprimer les entrées existantes pour la même date et joueuse
     st.session_state.daily_entries = [
         e for e in st.session_state.daily_entries 
         if not (e['player_id'] == player_id and e['date'] == entry_date)
     ]
     
     st.session_state.daily_entries.append(entry)
-    calculate_correlations()
     save_data()
     return entry
-
-def calculate_correlations():
-    """Calcule les corrélations pour toutes les joueuses"""
-    for player in st.session_state.players:
-        if not player['last_period_date']:
-            continue
-            
-        for phase in player['correlation_data']:
-            player['correlation_data'][phase] = {'total': 0, 'fatigue': 0}
-        
-        last_period = player['last_period_date']
-        
-        for entry in st.session_state.daily_entries:
-            if entry['player_id'] != player['id']:
-                continue
-                
-            entry_date = entry['date']
-            diff_days = (entry_date - last_period).days
-            
-            if diff_days >= 0:
-                day_in_cycle = (diff_days % player['cycle_length']) + 1
-                phase = get_cycle_phase(day_in_cycle, player['cycle_length'], player['period_duration'])
-                
-                player['correlation_data'][phase]['total'] += 1
-                if entry['fatigue_level'] >= 4:
-                    player['correlation_data'][phase]['fatigue'] += 1
-
-def get_energy_match_level(expected, actual):
-    """Détermine le niveau de correspondance entre énergie attendue et réelle"""
-    if expected == actual:
-        return 'high'
-    
-    if (expected == 'high' and actual == 'medium') or \
-       (expected == 'medium' and actual in ['high', 'low']) or \
-       (expected == 'low' and actual == 'medium'):
-        return 'medium'
-    
-    return 'low'
 
 def render_calendar():
     """Affiche le calendrier avec les phases, correspondances et risques individuels"""
@@ -632,7 +594,7 @@ def render_calendar():
             dominant_phase = None
             bg_gradient = 'linear-gradient(135deg, #ecf0f1, #bdc3c7)'
         
-        # Créer le contenu du jour avec meilleur contraste
+        # Créer le contenu du jour
         day_html = f"""
         <div class='day' style='background: {bg_gradient}; position: relative;'>
             <div class='day-content'>
@@ -641,11 +603,11 @@ def render_calendar():
                 <div class='player-indicator'>
         """
         
-        # Ajouter les marqueurs pour chaque joueuse avec des couleurs plus contrastées
+        # Ajouter les marqueurs pour chaque joueuse
         for player in st.session_state.players:
             player_entry = next((e for e in day_entries if e['player_id'] == player['id']), None)
             
-            if player_entry and player['last_period_date']:
+            if player['last_period_date']:
                 last_period = player['last_period_date']
                 diff_days = (current_date - last_period).days
                 
@@ -653,29 +615,26 @@ def render_calendar():
                     day_in_cycle = (diff_days % player['cycle_length']) + 1
                     phase = get_cycle_phase(day_in_cycle, player['cycle_length'], player['period_duration'])
                     
-                    expected_energy = player['expected_energy'][phase]
-                    actual_energy = 'high' if player_entry['energy_level'] >= 4 else 'medium' if player_entry['energy_level'] == 3 else 'low'
-                    match_level = get_energy_match_level(expected_energy, actual_energy)
-                    
-                    # Couleurs plus contrastées pour les marqueurs
-                    match_color = {
-                        'high': '#27ae60',    # Vert plus foncé
-                        'medium': '#f39c12',  # Orange plus foncé
-                        'low': '#e74c3c'      # Rouge plus foncé
-                    }[match_level]
-                    
-                    day_html += f"<div class='player-marker' style='background-color: {match_color}' title='{player['name']}: Correspondance {match_level}'></div>"
-                    
-                    # Ajouter l'indicateur de risque individuel
+                    # Déterminer le niveau de risque
                     risk_level = get_player_risk_level(player, current_date)
-                    if risk_level:
-                        risk_color = {
-                            'low': '#27ae60',
-                            'medium': '#f39c12',
-                            'high': '#e74c3c'
-                        }[risk_level]
-                        
-                        day_html += f"<div class='player-risk' style='background-color: {risk_color}' title='{player['name']}: Risque {risk_level}'></div>"
+                    
+                    # Couleur en fonction du risque
+                    risk_color = {
+                        'low': '#27ae60',    # Vert
+                        'medium': '#f39c12', # Orange
+                        'high': '#e74c3c'    # Rouge
+                    }.get(risk_level, '#bdc3c7')  # Gris par défaut
+                    
+                    # Créer le marqueur avec l'initiale du prénom
+                    initial = player['name'][0].upper()
+                    day_html += f"""
+                    <div class='player-marker' style='background-color: {risk_color};'
+                         title='{player["name"]} - {current_date.strftime("%d/%m/%Y")}
+Phase: {get_phase_name_fr(phase)} (Jour {day_in_cycle})
+État: {risk_level.capitalize() if risk_level else "Normal"}'>
+                        {initial}
+                    </div>
+                    """
         
         day_html += """
                 </div>
@@ -687,59 +646,55 @@ def render_calendar():
     
     st.markdown("</div>", unsafe_allow_html=True)
     
-    # Légende améliorée
+    # Légende avec explications
     st.markdown("""
     <div class='legend'>
         <h3>🎨 Légende des phases du cycle</h3>
         <div class='legend-item'>
             <div class='legend-color menstruation'></div>
-            <span>Menstruation - Phase des règles</span>
+            <span><strong>Menstruation</strong> - Phase des règles</span>
         </div>
         <div class='legend-item'>
             <div class='legend-color follicular'></div>
-            <span>Phase folliculaire - Croissance des follicules</span>
+            <span><strong>Phase folliculaire</strong> - Croissance des follicules</span>
         </div>
         <div class='legend-item'>
             <div class='legend-color ovulation'></div>
-            <span>Ovulation - Période de fertilité maximale</span>
+            <span><strong>Ovulation</strong> - Période de fertilité maximale</span>
         </div>
         <div class='legend-item'>
             <div class='legend-color luteal'></div>
-            <span>Phase lutéale - Préparation à la menstruation</span>
+            <span><strong>Phase lutéale</strong> - Préparation à la menstruation</span>
         </div>
         
-        <h4 style='margin-top: 20px; color: #2c3e50;'>📊 Correspondance énergie attendue/réelle :</h4>
+        <h4 style='margin-top: 20px;'>👤 État des joueuses :</h4>
         <div class='legend-item'>
-            <div class='player-marker' style='background-color: #27ae60; width: 25px; height: 25px;'></div>
-            <span>Correspondance élevée - Énergie conforme aux attentes</span>
+            <div class='player-marker' style='background-color: #27ae60; width: 25px; height: 25px;'>J</div>
+            <span><strong>Faible risque</strong> - Énergie normale</span>
         </div>
         <div class='legend-item'>
-            <div class='player-marker' style='background-color: #f39c12; width: 25px; height: 25px;'></div>
-            <span>Correspondance moyenne - Légère différence</span>
+            <div class='player-marker' style='background-color: #f39c12; width: 25px; height: 25px;'>J</div>
+            <span><strong>Risque modéré</strong> - Fatigue possible</span>
         </div>
         <div class='legend-item'>
-            <div class='player-marker' style='background-color: #e74c3c; width: 25px; height: 25px;'></div>
-            <span>Correspondance faible - Énergie très différente</span>
-        </div>
-        
-        <h4 style='margin-top: 20px; color: #2c3e50;'>⚠️ Indicateur de risque individuel :</h4>
-        <div class='legend-item'>
-            <div class='player-risk' style='background-color: #27ae60; width: 25px; height: 25px;'></div>
-            <span>Risque faible - Moins de 30% de corrélation historique</span>
-        </div>
-        <div class='legend-item'>
-            <div class='player-risk' style='background-color: #f39c12; width: 25px; height: 25px;'></div>
-            <span>Risque moyen - 30-50% de corrélation historique</span>
-        </div>
-        <div class='legend-item'>
-            <div class='player-risk' style='background-color: #e74c3c; width: 25px; height: 25px;'></div>
-            <span>Risque élevé - Plus de 50% de corrélation historique</span>
+            <div class='player-marker' style='background-color: #e74c3c; width: 25px; height: 25px;'>J</div>
+            <span><strong>Risque élevé</strong> - Fatigue probable</span>
         </div>
         
-        <p style='margin-top: 20px; color: #2c3e50; font-style: italic;'>
-            <strong>Note :</strong> La corrélation historique représente le pourcentage de jours 
-            où la joueuse a signalé une fatigue élevée pendant cette phase de son cycle.
-        </p>
+        <div class='correlation-explanation'>
+            <h4>📊 Explication des corrélations</h4>
+            <p>
+                La <strong>corrélation historique</strong> représente le pourcentage de jours 
+                où la joueuse a signalé une fatigue élevée pendant cette phase de son cycle.
+                Plus ce pourcentage est élevé, plus il y a de chances que la joueuse ressente 
+                de la fatigue pendant cette phase dans le futur.
+            </p>
+            <p>
+                <strong>Exemple :</strong> Une corrélation de 75% pendant la phase lutéale signifie 
+                que dans 3 cas sur 4, la joueuse a signalé une fatigue élevée pendant 
+                cette phase lors des cycles précédents.
+            </p>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -748,10 +703,79 @@ def render_player_management():
     st.subheader("Ajouter une nouvelle joueuse")
     
     with st.form("add_player_form"):
-        player_name = st.text_input("Nom de la joueuse")
-        submitted = st.form_submit_button("Ajouter")
+        player_name = st.text_input("Nom de la joueuse", placeholder="Prénom Nom")
+        
+        # Section pour la date des dernières règles
+        st.subheader("Début du cycle (J1)")
+        col1, col2 = st.columns(2)
+        with col1:
+            last_period = st.date_input(
+                "Date des dernières règles",
+                value=date.today()
+            )
+        
+        # Section pour la fatigue quotidienne
+        st.subheader("État de fatigue par jour du cycle")
+        st.markdown("""
+            <div class='explanation-box'>
+                <p>Veuillez indiquer pour chaque jour de votre cycle typique (de J1 à la fin) votre niveau de fatigue :</p>
+                <ul>
+                    <li><strong>1-2</strong> : Très énergique, pas de fatigue</li>
+                    <li><strong>3</strong> : Fatigue légère, normale</li>
+                    <li><strong>4-5</strong> : Fatigue importante, besoin de repos</li>
+                </ul>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # Saisie de la fatigue par jour
+        daily_fatigue = {}
+        cycle_length = st.slider(
+            "Durée de votre cycle (jours)",
+            min_value=21,
+            max_value=35,
+            value=28,
+            key="new_player_cycle"
+        )
+        
+        period_duration = st.slider(
+            "Durée habituelle de vos règles (jours)",
+            min_value=2,
+            max_value=9,
+            value=5,
+            key="new_player_period"
+        )
+        
+        st.markdown("**Niveau de fatigue par jour :**")
+        cols = st.columns(5)
+        for day in range(1, cycle_length + 1):
+            with cols[(day-1) % 5]:
+                # Déterminer la phase pour le jour
+                phase = get_cycle_phase(day, cycle_length, period_duration)
+                phase_color = get_phase_solid_color(phase)
+                
+                fatigue_level = st.slider(
+                    f"Jour {day}",
+                    min_value=1,
+                    max_value=5,
+                    value=3,
+                    key=f"fatigue_day_{day}",
+                    help=f"Phase: {get_phase_name_fr(phase)}"
+                )
+                daily_fatigue[str(day)] = fatigue_level
+                
+                # Barre de visualisation
+                fatigue_percent = (fatigue_level / 5) * 100
+                st.markdown(f"""
+                    <div style="margin-top: -10px; margin-bottom: 20px;">
+                        <div class="fatigue-bar">
+                            <div class="fatigue-level" style="width: {fatigue_percent}%; background-color: {phase_color};"></div>
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
+        
+        submitted = st.form_submit_button("Ajouter la joueuse")
         if submitted and player_name:
-            add_player(player_name)
+            add_player(player_name, last_period, daily_fatigue)
             st.success(f"Joueuse {player_name} ajoutée avec succès!")
             st.rerun()
     
@@ -800,43 +824,28 @@ def render_player_management():
                     player['period_duration'] = period_duration
                     save_data()
             
-            st.subheader("Énergie attendue par phase")
+            # Afficher les plages de phases
+            phase_ranges = get_phase_range(player['cycle_length'], player['period_duration'])
+            st.subheader("Phases du cycle")
             cols = st.columns(4)
             phases = ['menstruation', 'follicular', 'ovulation', 'luteal']
-            phase_names = ['Menstruation', 'Phase folliculaire', 'Ovulation', 'Phase lutéale']
             
             for i, phase in enumerate(phases):
                 with cols[i]:
-                    st.markdown(f"**{phase_names[i]}**")
-                    
-                    energy_translation = {
-                        'low': 'Faible',
-                        'medium': 'Moyenne',
-                        'high': 'Élevée'
-                    }
-                    
-                    current_value = energy_translation.get(
-                        player['expected_energy'][phase], 
-                        'Moyenne'
-                    )
-                    
-                    energy_option = st.radio(
-                        "Énergie",
-                        options=['Élevée', 'Moyenne', 'Faible'],
-                        index=['Élevée', 'Moyenne', 'Faible'].index(current_value),
-                        key=f"energy_{player['id']}_{phase}",
-                        horizontal=False
-                    )
-                    
-                    reverse_translation = {
-                        'Faible': 'low',
-                        'Moyenne': 'medium',
-                        'Élevée': 'high'
-                    }
-                    new_energy = reverse_translation[energy_option]
-                    if new_energy != player['expected_energy'][phase]:
-                        player['expected_energy'][phase] = new_energy
-                        save_data()
+                    phase_name = get_phase_name_fr(phase)
+                    st.markdown(f"""
+                        <div style="
+                            background: {get_phase_color(phase)};
+                            color: white;
+                            padding: 15px;
+                            border-radius: 10px;
+                            text-align: center;
+                            margin-bottom: 15px;
+                        ">
+                            <strong>{phase_name}</strong><br>
+                            {phase_ranges[phase]}
+                        </div>
+                    """, unsafe_allow_html=True)
 
 def render_daily_entry():
     """Interface de saisie quotidienne avec contexte de cycle et recommandations"""
@@ -889,12 +898,10 @@ def render_daily_entry():
                     selected_player['period_duration']
                 )
                 
-                phase_data = selected_player['correlation_data'][current_phase]
-                total_entries = phase_data['total']
-                fatigue_entries = phase_data['fatigue']
-                correlation = round((fatigue_entries / total_entries) * 100) if total_entries > 0 else 0
+                # Obtenir la fatigue historique pour ce jour
+                historical_fatigue = selected_player['daily_fatigue'].get(str(day_in_cycle), 3)
                 
-                cols = st.columns([1, 2])
+                cols = st.columns(2)
                 
                 with cols[0]:
                     st.markdown(f"**Phase actuelle:**")
@@ -905,32 +912,28 @@ def render_daily_entry():
                         f"</div>", 
                         unsafe_allow_html=True
                     )
+                    st.markdown(f"**Jour du cycle:** {day_in_cycle}/{selected_player['cycle_length']}")
                 
                 with cols[1]:
-                    st.markdown(f"**Jour du cycle:** {day_in_cycle}/{selected_player['cycle_length']}")
-                    st.markdown(f"**Énergie attendue:** {selected_player['expected_energy'][current_phase].capitalize()}")
+                    st.markdown(f"**Fatigue historique ce jour:**")
+                    # Barre de visualisation
+                    fatigue_percent = (historical_fatigue / 5) * 100
+                    phase_color = get_phase_solid_color(current_phase)
+                    st.markdown(f"""
+                        <div style="margin-top: 10px;">
+                            <div class="fatigue-bar">
+                                <div class="fatigue-level" style="width: {fatigue_percent}%; background-color: {phase_color};"></div>
+                            </div>
+                        </div>
+                    """, unsafe_allow_html=True)
+                    st.caption(f"Niveau historique: {historical_fatigue}/5")
                     
-                    if total_entries > 0:
-                        st.markdown(f"**Corrélation historique fatigue:**")
-                        
-                        progress_color = "#2ed573" if correlation < 30 else "#ffa502" if correlation < 50 else "#ff4757"
-                        st.markdown(
-                            f"<div style='display: flex; align-items: center;'>"
-                            f"<div style='width: 100%; background: #f0f0f0; border-radius: 10px;'>"
-                            f"<div style='width: {correlation}%; background: {progress_color}; "
-                            f"border-radius: 10px; text-align: center; color: white; padding: 5px;'>"
-                            f"{correlation}%"
-                            f"</div></div></div>",
-                            unsafe_allow_html=True
-                        )
-                        
-                        if correlation > 50:
-                            st.error("**🔴 Phase à risque élevé de fatigue**")
-                            st.markdown("Recommandation: Adaptez l'intensité de l'entraînement")
-                        elif correlation > 30:
-                            st.warning("**🟠 Phase à risque modéré de fatigue**")
-                    else:
-                        st.info("ℹ️ Pas encore de données pour cette phase")
+                    # Recommandation basée sur l'historique
+                    if historical_fatigue >= 4:
+                        st.error("**🔴 Jour à risque élevé de fatigue**")
+                        st.markdown("Recommandation: Réduisez l'intensité de l'entraînement")
+                    elif historical_fatigue >= 3:
+                        st.warning("**🟠 Risque modéré de fatigue**")
             else:
                 st.warning("⚠️ Date antérieure aux dernières règles enregistrées")
         else:
@@ -1028,60 +1031,31 @@ def render_coach_dashboard():
             day_in_cycle = (diff_days % player['cycle_length']) + 1
             phase = get_cycle_phase(day_in_cycle, player['cycle_length'], player['period_duration'])
             
-            # 1. Détection des phases à énergie attendue faible
-            if player['expected_energy'][phase] == 'low':
+            # Détection des jours à risque de fatigue
+            historical_fatigue = player['daily_fatigue'].get(str(day_in_cycle), 3)
+            
+            if historical_fatigue >= 4:
                 alerts.append({
-                    'type': 'low_energy',
                     'player': player['name'],
                     'phase': phase,
                     'day_in_cycle': day_in_cycle,
-                    'expected_energy': player['expected_energy'][phase],
-                    'message': "Phase normalement associée à une énergie faible - adapter l'entraînement",
-                    'alert_color': "#ff6b6b",
-                    'icon': "⚠️",
-                    'priority': 1  # Haute priorité
+                    'fatigue_level': historical_fatigue,
+                    'message': "Jour historiquement associé à une fatigue importante",
+                    'alert_color': "#e74c3c",
+                    'icon': "🔥",
+                    'priority': 1
                 })
-            
-            # 2. Détection des risques basés sur l'historique de fatigue
-            phase_data = player['correlation_data'][phase]
-            total_entries = phase_data['total']
-            fatigue_entries = phase_data['fatigue']
-            
-            if total_entries > 0:
-                correlation = round((fatigue_entries / total_entries) * 100)
-                
-                # Détermination du niveau de risque
-                if correlation > 50:
-                    risk_level = "Élevé"
-                    alert_color = "#e74c3c"
-                    icon = "🔥"
-                    priority = 1
-                elif correlation > 30:
-                    risk_level = "Modéré" 
-                    alert_color = "#f39c12"
-                    icon = "⚠️"
-                    priority = 2
-                else:
-                    risk_level = "Faible"
-                    alert_color = "#27ae60"
-                    icon = "ℹ️"
-                    priority = 3
-                
-                if correlation > 30:
-                    alerts.append({
-                        'type': 'fatigue_risk',
-                        'player': player['name'],
-                        'phase': phase,
-                        'day_in_cycle': day_in_cycle,
-                        'correlation': correlation,
-                        'expected_energy': player['expected_energy'][phase],
-                        'total_entries': total_entries,
-                        'risk_level': risk_level,
-                        'alert_color': alert_color,
-                        'icon': icon,
-                        'priority': priority,
-                        'message': f"Historique de fatigue dans cette phase ({correlation}% des jours)"
-                    })
+            elif historical_fatigue >= 3:
+                alerts.append({
+                    'player': player['name'],
+                    'phase': phase,
+                    'day_in_cycle': day_in_cycle,
+                    'fatigue_level': historical_fatigue,
+                    'message': "Jour historiquement associé à une fatigue modérée",
+                    'alert_color': "#f39c12",
+                    'icon': "⚠️",
+                    'priority': 2
+                })
     
     # Affichage des alertes
     if not alerts:
@@ -1116,14 +1090,13 @@ def render_coach_dashboard():
                             margin: 8px 0;
                             font-size: 14px;
                         '>
-                            {alert['risk_level'] if alert['type'] == 'fatigue_risk' else 'Énergie faible'}
+                            Fatigue historique: {alert['fatigue_level']}/5
                         </div>
                         <div style='color: #555; font-size: 14px;'>
                             {alert['message']}
                         </div>
-                        {f"<div style='margin-top: 8px; font-size: 13px;'>Corrélation historique: <strong>{alert['correlation']}%</strong> (sur {alert['total_entries']} jours)</div>" if alert['type'] == 'fatigue_risk' else ""}
                         <div style='margin-top: 5px; font-size: 13px;'>
-                            Énergie attendue: <strong>{alert['expected_energy'].capitalize()}</strong>
+                            Recommandation: Surveillez la joueuse et adaptez l'entraînement si nécessaire
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
@@ -1156,33 +1129,46 @@ def render_coach_dashboard():
                 else:
                     st.warning("Indisponible")
             
-            # Graphique des phases
-            st.markdown("**📈 Répartition des phases**")
-            phases = ['menstruation', 'follicular', 'ovulation', 'luteal']
-            phase_data = []
+            # Graphique de fatigue quotidienne
+            st.markdown("**📈 Profil de fatigue quotidien**")
             
-            for phase in phases:
-                data = player['correlation_data'][phase]
-                total = data['total']
-                fatigue = data['fatigue']
-                phase_data.append({
-                    'phase': get_phase_name_fr(phase),
-                    'total': total,
-                    'fatigue': fatigue,
-                    'color': get_phase_solid_color(phase)
-                })
+            days = list(range(1, player['cycle_length'] + 1))
+            fatigue_levels = [player['daily_fatigue'].get(str(day), 3) for day in days]
+            phases = [get_cycle_phase(day, player['cycle_length'], player['period_duration']) for day in days]
             
             # Création du graphique
-            fig, ax = plt.subplots(figsize=(10, 4))
-            for i, phase in enumerate(phase_data):
-                if phase['total'] > 0:
-                    correlation = (phase['fatigue'] / phase['total']) * 100
-                    ax.barh(phase['phase'], correlation, color=phase['color'])
-                    ax.text(correlation + 1, i, f"{int(correlation)}%", va='center')
+            fig, ax = plt.subplots(figsize=(12, 4))
+            ax.plot(days, fatigue_levels, 'o-', color='#3498db', linewidth=2)
             
-            ax.set_xlim(0, 100)
-            ax.set_xlabel('Pourcentage de jours avec fatigue')
-            ax.set_title('Corrélation fatigue par phase')
+            # Ajouter des zones colorées pour les phases
+            phase_colors = {
+                'menstruation': '#e74c3c',
+                'follicular': '#f39c12',
+                'ovulation': '#27ae60',
+                'luteal': '#8e44ad'
+            }
+            
+            current_phase = None
+            phase_start = 1
+            for i, day in enumerate(days):
+                if phases[i] != current_phase or i == len(days) - 1:
+                    if current_phase:
+                        phase_end = day - 0.5 if i < len(days) - 1 else day
+                        ax.axvspan(phase_start, phase_end, alpha=0.2, color=phase_colors[current_phase])
+                        ax.text((phase_start + phase_end) / 2, 5.2, 
+                                get_phase_name_fr(current_phase), 
+                                ha='center', va='center', 
+                                color=phase_colors[current_phase], 
+                                fontweight='bold')
+                    current_phase = phases[i]
+                    phase_start = day - 0.5
+            
+            ax.set_ylim(0.5, 5.5)
+            ax.set_xlim(0.5, player['cycle_length'] + 0.5)
+            ax.set_xlabel('Jour du cycle')
+            ax.set_ylabel('Niveau de fatigue')
+            ax.set_title('Profil de fatigue quotidien')
+            ax.grid(True, linestyle='--', alpha=0.7)
             plt.tight_layout()
             st.pyplot(fig)
             
@@ -1194,47 +1180,41 @@ def render_coach_dashboard():
                 continue
             
             current_phase = get_cycle_phase(day_in_cycle, player['cycle_length'], player['period_duration'])
-            phase_corr = player['correlation_data'][current_phase]
+            historical_fatigue = player['daily_fatigue'].get(str(day_in_cycle), 3)
             
-            if phase_corr['total'] > 0:
-                correlation = (phase_corr['fatigue'] / phase_corr['total']) * 100
+            if historical_fatigue >= 4:
+                st.warning(f"**Adaptation recommandée pendant la phase {get_phase_name_fr(current_phase)}**")
                 
-                if correlation > 50 or player['expected_energy'][current_phase] == 'low':
-                    st.warning(f"**Adaptation recommandée pendant la phase {get_phase_name_fr(current_phase)}**")
-                    
-                    recommendations = {
-                        'menstruation': [
-                            "Réduire l'intensité des exercices physiques",
-                            "Privilégier les exercices techniques légers",
-                            "Augmenter les temps de récupération",
-                            "Surveiller l'hydratation"
-                        ],
-                        'follicular': [
-                            "Intensité progressive",
-                            "Travail technique approfondi",
-                            "Exercices d'endurance"
-                        ],
-                        'ovulation': [
-                            "Entraînements intenses possibles",
-                            "Travail sur les explosivité",
-                            "Exercices compétitifs"
-                        ],
-                        'luteal': [
-                            "Maintenir une intensité modérée",
-                            "Focus sur la stratégie d'équipe",
-                            "Exercices de coordination"
-                        ]
-                    }
-                    
-                    for rec in recommendations[current_phase]:
-                        st.markdown(f"- {rec}")
-                    
-                    if correlation > 50:
-                        st.markdown(f"*Basé sur une corrélation de fatigue de {int(correlation)}% pendant cette phase*")
-                else:
-                    st.success("Aucune adaptation spécifique nécessaire pour la phase actuelle")
+                recommendations = {
+                    'menstruation': [
+                        "Réduire l'intensité des exercices physiques de 30%",
+                        "Privilégier les exercices techniques légers",
+                        "Augmenter les temps de récupération entre les séries",
+                        "Surveiller l'hydratation et l'apport en fer"
+                    ],
+                    'follicular': [
+                        "Intensité progressive sur la semaine",
+                        "Travail technique approfondi",
+                        "Exercices d'endurance à intensité modérée"
+                    ],
+                    'ovulation': [
+                        "Entraînements intenses possibles",
+                        "Travail sur l'explosivité et la puissance",
+                        "Exercices compétitifs et matchs d'entraînement"
+                    ],
+                    'luteal': [
+                        "Maintenir une intensité modérée",
+                        "Focus sur la stratégie d'équipe",
+                        "Exercices de coordination et de précision"
+                    ]
+                }
+                
+                for rec in recommendations[current_phase]:
+                    st.markdown(f"- {rec}")
+                
+                st.markdown(f"*Basé sur un niveau de fatigue historique de {historical_fatigue}/5 pour ce jour*")
             else:
-                st.info("Pas encore assez de données pour cette phase")
+                st.success("Aucune adaptation spécifique nécessaire pour la phase actuelle")
             
             # Historique des entrées récentes
             st.markdown("**📝 Dernières observations**")
@@ -1270,3 +1250,6 @@ elif current_tab == tabs[2]:
     render_daily_entry()
 elif current_tab == tabs[3]:
     render_coach_dashboard()
+
+# Sauvegarde automatique
+save_data()
