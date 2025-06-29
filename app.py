@@ -849,7 +849,7 @@ def render_player_management():
                     st.markdown(f"""
                         <div style="
                             background: {get_phase_color(phase)};
-                            color: white;
+                            color: black;
                             padding: 15px;
                             border-radius: 10px;
                             text-align: center;
@@ -920,7 +920,7 @@ def render_daily_entry():
                     st.markdown(f"**Phase actuelle:**")
                     st.markdown(
                         f"<div style='background-color: {get_phase_color(current_phase)}; "
-                        f"padding: 10px; border-radius: 8px; text-align: center; color: white; font-weight: bold;'>"
+                        f"padding: 10px; border-radius: 8px; text-align: center; color: black; font-weight: bold;'>"
                         f"{get_phase_name_fr(current_phase)}"
                         f"</div>", 
                         unsafe_allow_html=True
@@ -1097,7 +1097,7 @@ def render_coach_dashboard():
                         <div style='
                             display: inline-block;
                             background-color: {alert['alert_color']};
-                            color: white;
+                            color: black;
                             padding: 3px 10px;
                             border-radius: 15px;
                             margin: 8px 0;
