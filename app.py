@@ -112,6 +112,7 @@ st.markdown("""
             max-width: 1600px;
             margin: 0 auto;
             background: rgba(255, 255, 255, 0.95);
+            color: black;
             border-radius: 20px;
             padding: 30px;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
@@ -142,7 +143,7 @@ st.markdown("""
                 
         .alert-energy {
             background: #000;
-            color: #000; /* <- ici on force le texte en noir */
+            color:  black; 
             border-left: 6px solid #ff6b6b;
             padding: 20px;
             margin-bottom: 15px;
@@ -182,6 +183,7 @@ st.markdown("""
             align-items: center;
             width: 100%;
             height: 100%;
+            color: black;
             position: relative;
         }
         
@@ -206,6 +208,7 @@ st.markdown("""
         
         .player-indicator {
             width: 100%;
+            color: black;
             flex-grow: 1;
             display: flex;
             flex-direction: column;
@@ -225,6 +228,7 @@ st.markdown("""
             align-items: center;
             justify-content: center;
             font-weight: bold;
+            color: black;
             font-size: 12px;
             color: black;
             text-shadow: 1px 1px 1px #000;
@@ -232,6 +236,7 @@ st.markdown("""
         
         .player-risk {
             position: absolute;
+            color: black;
             top: 5px;
             left: 5px;
             width: 15px;
@@ -243,6 +248,7 @@ st.markdown("""
         
         .legend {
             background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            color: black;
             padding: 25px;
             border-radius: 15px;
             margin-top: 20px;
