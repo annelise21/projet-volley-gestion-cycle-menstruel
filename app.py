@@ -141,7 +141,7 @@ st.markdown("""
         }
                 
         .alert-energy {
-            background: #fff5f5;
+            background: #000;
             color: #000; /* <- ici on force le texte en noir */
             border-left: 6px solid #ff6b6b;
             padding: 20px;
@@ -169,7 +169,7 @@ st.markdown("""
         
         .day-header {
             background: linear-gradient(135deg, #34495e, #2c3e50);
-            color: white;
+            color: black;
             font-weight: bold;
             padding: 15px 0;
             font-size: 14px;
@@ -191,8 +191,8 @@ st.markdown("""
             margin-bottom: 5px;
             color: #2c3e50;
             text-shadow: 
-                0 0 5px white,
-                0 0 10px white;
+                0 0 5px black,
+                0 0 10px black;
             z-index: 10;
         }
         
@@ -201,7 +201,7 @@ st.markdown("""
             margin-bottom: 8px;
             color: #34495e;
             font-weight: bold;
-            text-shadow: 1px 1px 0px white, -1px -1px 0px white;
+            text-shadow: 1px 1px 0px black, -1px -1px 0px black;
         }
         
         .player-indicator {
@@ -226,7 +226,7 @@ st.markdown("""
             justify-content: center;
             font-weight: bold;
             font-size: 12px;
-            color: white;
+            color: black;
             text-shadow: 1px 1px 1px #000;
         }
         
@@ -260,6 +260,7 @@ st.markdown("""
             margin-bottom: 12px;
             padding: 5px;
             background: white;
+            color: black;
             border-radius: 8px;
             border: 1px solid #dee2e6;
         }
@@ -267,6 +268,7 @@ st.markdown("""
         .legend-color {
             width: 35px;
             height: 35px;
+            color: black;
             border-radius: 8px;
             margin-right: 15px;
             border: 3px solid #2c3e50;
@@ -280,6 +282,7 @@ st.markdown("""
         
         .month-nav {
             display: flex;
+            color: black;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
@@ -292,7 +295,7 @@ st.markdown("""
         .current-month {
             font-size: 1.8em;
             font-weight: bold;
-            color: white;
+            color: black;
             text-align: center;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
@@ -302,7 +305,7 @@ st.markdown("""
             border-radius: 8px;
             border: none;
             background: linear-gradient(135deg, #3498db, #2980b9);
-            color: white;
+            color: black;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -319,6 +322,7 @@ st.markdown("""
             justify-content: space-between;
             align-items: center;
             background: #fff5f5;
+            color: black;
             border-left: 6px solid #e74c3c;
             padding: 20px;
             margin-bottom: 15px;
@@ -329,6 +333,7 @@ st.markdown("""
         
         .player-card {
             background: white;
+            color: black;
             border-radius: 15px;
             padding: 20px;
             margin-bottom: 20px;
@@ -360,6 +365,7 @@ st.markdown("""
             background: #f8f9fa;
             border-left: 4px solid #3498db;
             padding: 15px;
+            color: black;
             border-radius: 8px;
             margin: 15px 0;
         }
