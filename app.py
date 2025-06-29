@@ -1081,13 +1081,14 @@ def render_coach_dashboard():
             with st.container():
                 col1, col2 = st.columns([1, 20])
                 with col1:
-                    st.markdown(f"<div style='font-size: 24px;'>{alert['icon']}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-size: 24px;color=black;'>{alert['icon']}</div>", unsafe_allow_html=True)
                 with col2:
                     st.markdown(f"""
                     <div style='
                         padding: 15px;
                         border-radius: 10px;
                         background-color: #f8f9fa;
+                        color: black;
                         border-left: 5px solid {alert['alert_color']};
                         margin-bottom: 15px;
                     '>
