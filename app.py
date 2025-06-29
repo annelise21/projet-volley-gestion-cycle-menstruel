@@ -139,9 +139,10 @@ st.markdown("""
             padding: 20px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
-        
+                
         .alert-energy {
             background: #fff5f5;
+            color: #000; /* <- ici on force le texte en noir */
             border-left: 6px solid #ff6b6b;
             padding: 20px;
             margin-bottom: 15px;
